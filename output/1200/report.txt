@@ -1,0 +1,7 @@
+MinUtility: 1200
+FileName,ExecutionTime(ms),FileSize(bytes)
+retail_utility.txt,45429,0
+accidents_utility.txt,41293,844582
+chess_utility.txt,57963,3314535
+mushroom_utility.txt,23798,1380819
+foodmart_utility.txt,2378,11911
