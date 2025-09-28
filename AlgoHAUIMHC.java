@@ -87,9 +87,9 @@ public class AlgoHAUIMHC {
 	/**
 	 * this class represent the chromosome
 	 */
-	class ChroNode implements Comparable {
+	class ChroNode implements Comparable<ChroNode> {
 		BitSet chromosome;// the chromosome
-		int fitness;// fitness value of chromosome
+		double fitness;// fitness value of chromosome
 		double rfitness;// select chromosomes to crossover
 		int rank;// the rank of chromosome's fitness in population
 
@@ -109,25 +109,25 @@ public class AlgoHAUIMHC {
 			rank = tempChroNode.rank;
 		}
 
+		// calculate fitness of itemset
 		public void calculateFitness(int k, List<Integer> templist) {
-			if (k == 0)
-				return;
-
+			if (k == 0) { this.fitness = 0.0; return; }
 			int i, j, p, q, temp, m;
 			int sum, fitness = 0;
-
-			for (m = 0; m < templist.size(); m++) {
-				p = templist.get(m);
+			long totalUtil = 0L;
+			for (m = 0; m < templist.size(); m++) { // m�������񼯺�
+				p = templist.get(m).intValue(); // ��p����database�е�transaction
 				i = 0;
 				j = 0;
 				q = 0;
 				temp = 0;
 				sum = 0;
-
+				// use j to scan bit=1 in tempGroup.X, use q to scan every transaction,
+				// use i to scan transaction.X
 				while (q < database.get(p).size() && i < this.chromosome.length()) {
 					if (this.chromosome.get(i)) {
 						if (database.get(p).get(q).item == twuPattern.get(i)) {
-							sum += database.get(p).get(q).utility;
+							sum = sum + database.get(p).get(q).utility;
 							++i;
 							++q;
 							++temp;
@@ -138,20 +138,17 @@ public class AlgoHAUIMHC {
 						++i;
 					}
 				}
-
 				if (temp == k) {
-					fitness += sum;
+					totalUtil += sum;
 				}
 			}
-
-			// Toplam fayda yerine ORTALAMA fayda hesaplıyoruz
-			this.fitness = k == 0 ? 0 : (int) Math.round((double) fitness / k);
+			this.fitness = totalUtil / (double) k;
 		}
 
 		@Override
-		public int compareTo(Object o) {
+		public int compareTo(ChroNode o) {
 			// TODO Auto-generated method stub
-			return -(fitness - ((ChroNode) o).fitness);
+			return -Double.compare(fitness, ((ChroNode) o).fitness);
 		}
 	}
 
@@ -160,9 +157,9 @@ public class AlgoHAUIMHC {
 	 */
 	class HUI {
 		String itemset;
-		int fitness;
+		double fitness;
 
-		public HUI(String itemset, int fitness) {
+		public HUI(String itemset, double fitness) {
 			super();
 			this.itemset = itemset;
 			this.fitness = fitness;
@@ -576,8 +573,8 @@ public class AlgoHAUIMHC {
 	}
 
 	public void calculateRfitness() {
-		int sum = 0;
-		int temp = 0;
+		double sum = 0;
+		double temp = 0;
 		// �ϼ���Ӧֵ
 		for (int i = 0; i < population.size(); ++i) {
 			sum = sum + population.get(i).fitness;
@@ -649,7 +646,6 @@ public class AlgoHAUIMHC {
 	 * 
 	 * @param tempChroNode the chromosome to be inserted
 	 */
-	// insert method for high average utility itemsets
 	private void insert(ChroNode tempChroNode) {
 		int i;
 		StringBuilder temp = new StringBuilder();
@@ -659,16 +655,22 @@ public class AlgoHAUIMHC {
 				temp.append(' ');
 			}
 		}
-
-		// Eğer daha önce eklenmemişse ekle
-		for (i = 0; i < huiSets.size(); i++) {
-			if (temp.toString().equals(huiSets.get(i).itemset)) {
-				return;
+		// huiSets is null
+		if (huiSets.size() == 0) {
+			huiSets.add(new HUI(temp.toString(), tempChroNode.fitness));
+		} else {
+			// huiSets is not null, judge whether exist an itemset in huiSets
+			// same with tempChroNode
+			for (i = 0; i < huiSets.size(); i++) {
+				if (temp.toString().equals(huiSets.get(i).itemset)) {
+					break;
+				}
 			}
+			// if not exist same itemset in huiSets with tempChroNode,insert it
+			// into huiSets
+			if (i == huiSets.size())
+				huiSets.add(new HUI(temp.toString(), tempChroNode.fitness));
 		}
-
-		// Yeni HAUI metodu: Ortalama fayda kullanılıyor
-		huiSets.add(new HUI(temp.toString(), tempChroNode.fitness));
 	}
 
 	/**
@@ -698,15 +700,19 @@ public class AlgoHAUIMHC {
 	 * @throws IOException
 	 */
 	private void writeOut() throws IOException {
+		// Create a string buffer
 		StringBuilder buffer = new StringBuilder();
+		// append the prefix
 		for (int i = 0; i < huiSets.size(); i++) {
 			buffer.append(huiSets.get(i).itemset);
-			buffer.append("#AVG_UTIL: ");
+			// append the utility value
+			buffer.append("#UTIL: ");
 			buffer.append(huiSets.get(i).fitness);
 			if (i != huiSets.size() - 1) {
 				buffer.append(System.lineSeparator());
 			}
 		}
+		// write to file
 		writer.write(buffer.toString());
 	}
 
